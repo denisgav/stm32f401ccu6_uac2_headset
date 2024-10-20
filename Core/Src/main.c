@@ -93,6 +93,7 @@ i2s_32b_audio_sample mic_i2s_read_buffer[SAMPLE_BUFFER_SIZE];
 
 #if USB_HID_AUDIO_CTRL_ACTIVE == 1
 usb_hid_status_t hid_status;
+void check_buttons(void);
 void usb_hid_task(void);
 #endif //USB_HID_AUDIO_CTRL_ACTIVE
 
@@ -966,30 +967,17 @@ void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s) {
  * @retval None
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	static uint32_t prev_btb_press__ms = 0;
+	// No interrupts are connected...
+	// Nothing to do here
 
-	uint32_t cur_time_ms = board_millis();
-
-	if (cur_time_ms - prev_btb_press__ms < 50)
-		return;
-
-	prev_btb_press__ms = cur_time_ms;
-
-	if (GPIO_Pin == USR_MIC_MUTE_BTN_Pin) {
-		current_settings.usr_mic_mute = !current_settings.usr_mic_mute;
-	}
-
-#if USB_HID_AUDIO_CTRL_ACTIVE == 1
-	if (GPIO_Pin == USR_SPK_MUTE_BTN_Pin) {
-		hid_status.cur_custom_ctrl_scan_code = MY_TUD_HID_CONSUMER_MUTE_CODE;
-		hid_status.custom_ctrl_scan_code_updated = true;
-	}
-
-	if (GPIO_Pin == USR_PLAY_PAUSE_BTN_Pin) {
-		hid_status.cur_custom_ctrl_scan_code = MY_TUD_HID_CONSUMER_PLAY_PAUSE_CODE;
-		hid_status.custom_ctrl_scan_code_updated = true;
-	}
-#endif //USB_HID_AUDIO_CTRL_ACTIVE
+//	static uint32_t prev_btb_press__ms = 0;
+//
+//	uint32_t cur_time_ms = board_millis();
+//
+//	if (cur_time_ms - prev_btb_press__ms < 50)
+//		return;
+//
+//	prev_btb_press__ms = cur_time_ms;
 }
 
 //void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s){
@@ -1228,7 +1216,54 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id,
 //    }
 //  }
 }
-//usb_hid_status_t hid_status;
+
+void check_buttons(void){
+	//--------------
+	// Checking play/pause, scan prev/next buttons
+	//--------------
+	GPIO_PinState play_pause_pin_state = HAL_GPIO_ReadPin(USR_PLAY_PAUSE_BTN_GPIO_Port, USR_PLAY_PAUSE_BTN_Pin);
+	GPIO_PinState scan_prev_pin_state = HAL_GPIO_ReadPin(USR_SCAN_PREV_BTN_GPIO_Port, USR_SCAN_PREV_BTN_Pin);
+	GPIO_PinState scan_next_pin_state = HAL_GPIO_ReadPin(USR_SCAN_NEXT_BTN_GPIO_Port, USR_SCAN_NEXT_BTN_Pin);
+
+	if((play_pause_pin_state == GPIO_PIN_SET) && (hid_status.btn_play_pause_status == GPIO_PIN_RESET)){
+		hid_status.custom_ctrl_scan_code_updated = true;
+		hid_status.cur_custom_ctrl_scan_code = MY_TUD_HID_CONSUMER_PLAY_PAUSE_CODE;
+	}
+	hid_status.btn_play_pause_status = play_pause_pin_state;
+
+	if((scan_prev_pin_state == GPIO_PIN_SET) && (hid_status.btn_scan_prev_status == GPIO_PIN_RESET)){
+		hid_status.custom_ctrl_scan_code_updated = true;
+		hid_status.cur_custom_ctrl_scan_code = MY_TUD_HID_CONSUMER_SCAN_PREVIOUS_CODE;
+	}
+	hid_status.btn_scan_next_status = scan_prev_pin_state;
+
+	if((scan_next_pin_state == GPIO_PIN_SET) && (hid_status.btn_scan_next_status == GPIO_PIN_RESET)){
+		hid_status.custom_ctrl_scan_code_updated = true;
+		hid_status.cur_custom_ctrl_scan_code = MY_TUD_HID_CONSUMER_SCAN_NEXT_CODE;
+	}
+	hid_status.btn_scan_next_status = scan_next_pin_state;
+	//--------------
+
+	//--------------
+	// Checking MIC mute button
+	//--------------
+	GPIO_PinState mic_mute_pin_state = HAL_GPIO_ReadPin(USR_MIC_MUTE_BTN_GPIO_Port, USR_MIC_MUTE_BTN_Pin);
+	if((mic_mute_pin_state == GPIO_PIN_SET) && (hid_status.btn_mic_mute_status == GPIO_PIN_RESET)){
+		current_settings.usr_mic_mute = !current_settings.usr_mic_mute;
+	}
+	hid_status.btn_mic_mute_status = mic_mute_pin_state;
+
+	//--------------
+	// Checking SPK mute button
+	//--------------
+	GPIO_PinState spk_mute_pin_state = HAL_GPIO_ReadPin(USR_SPK_MUTE_BTN_GPIO_Port, USR_SPK_MUTE_BTN_Pin);
+	if((spk_mute_pin_state == GPIO_PIN_RESET) && (hid_status.btn_spk_mute_status == GPIO_PIN_SET)){
+		hid_status.cur_custom_ctrl_scan_code = MY_TUD_HID_CONSUMER_MUTE_CODE;
+		hid_status.custom_ctrl_scan_code_updated = true;
+	}
+	hid_status.btn_spk_mute_status = spk_mute_pin_state;
+}
+
 void usb_hid_task(void) {
 	static uint32_t prev_hid_tasc_call__ms = 0;
 	static bool prev_media_report_is_not_empty = false;
@@ -1254,22 +1289,9 @@ void usb_hid_task(void) {
 	//--------------
 
 	//--------------
-	// Checking scan prev/next buttons
+	// Checking buttons
 	//--------------
-	GPIO_PinState scan_next_pin_state = HAL_GPIO_ReadPin(USR_SCAN_NEXT_BTN_GPIO_Port, USR_SCAN_NEXT_BTN_Pin);
-	GPIO_PinState scan_prev_pin_state = HAL_GPIO_ReadPin(USR_SCAN_PREV_BTN_GPIO_Port, USR_SCAN_PREV_BTN_Pin);
-
-	if((scan_prev_pin_state == GPIO_PIN_SET) && (hid_status.btn_scan_prev_status == GPIO_PIN_RESET)){
-		hid_status.custom_ctrl_scan_code_updated = true;
-		hid_status.cur_custom_ctrl_scan_code = MY_TUD_HID_CONSUMER_SCAN_PREVIOUS_CODE;
-	}
-	hid_status.btn_scan_next_status = scan_prev_pin_state;
-
-	if((scan_next_pin_state == GPIO_PIN_SET) && (hid_status.btn_scan_next_status == GPIO_PIN_RESET)){
-		hid_status.custom_ctrl_scan_code_updated = true;
-		hid_status.cur_custom_ctrl_scan_code = MY_TUD_HID_CONSUMER_SCAN_NEXT_CODE;
-	}
-	hid_status.btn_scan_next_status = scan_next_pin_state;
+	check_buttons();
 	//--------------
 
 	// Remote wakeup
