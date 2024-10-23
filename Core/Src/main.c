@@ -962,8 +962,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 //	prev_btb_press__ms = cur_time_ms;
 }
 
-//void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s){
-//}
+void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s){
+	refresh_i2s_connections();
+}
 
 uint32_t feed_spk_dma(uint32_t *dma_buffer_p,
 		uint32_t sizeof_half_dma_buffer_in_words) {
