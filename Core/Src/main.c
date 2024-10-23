@@ -779,6 +779,15 @@ void usb_headset_tud_audio_tx_done_post_load_handler(uint8_t rhport,
 		uint16_t n_bytes_copied, uint8_t itf, uint8_t ep_in,
 		uint8_t cur_alt_setting) {
 
+	if (current_settings.usr_mic_mute == true){
+		if (current_settings.mic_resolution == 24) {
+			memset(mic_usb_24b_buffer, 0x0, sizeof(mic_usb_24b_buffer));
+		} else {
+			memset(mic_usb_16b_buffer, 0x0, sizeof(mic_usb_16b_buffer));
+		}
+		return;
+	}
+
 	// Read data from microphone
 	uint32_t buffer_size_read = current_settings.samples_in_i2s_frame_min * 2;
 	int num_words_read = mic_machine_i2s_read_stream(&mic_i2s_read_buffer[0],
@@ -788,34 +797,31 @@ void usb_headset_tud_audio_tx_done_post_load_handler(uint8_t rhport,
 
 		for (uint32_t i = 0; i < num_of_frames_read; i++) {
 			if (current_settings.mic_resolution == 24) {
-				if (current_settings.usr_mic_mute == false) {
-					int32_t left_24b = (int32_t) mic_i2s_read_buffer[i].left
-							<< MIC_FORMAT_24B_TO_24B_SHIFT_VAL; // Magic number
-					int32_t right_24b =
-							(int32_t) mic_i2s_read_buffer[i].right
-									<< MIC_FORMAT_24B_TO_24B_SHIFT_VAL; // Magic number
+				int32_t left_24b = (int32_t) mic_i2s_read_buffer[i].left
+						<< MIC_FORMAT_24B_TO_24B_SHIFT_VAL; // Magic number
+				int32_t right_24b =
+						(int32_t) mic_i2s_read_buffer[i].right
+								<< MIC_FORMAT_24B_TO_24B_SHIFT_VAL; // Magic number
 
-					mic_usb_24b_buffer[i * 2] = left_24b; // TODO: check this value
-					mic_usb_24b_buffer[i * 2 + 1] = right_24b; // TODO: check this value
-				} else {
-					mic_usb_24b_buffer[i * 2] = 0x0;
-					mic_usb_24b_buffer[i * 2 + 1] = 0x0;
-				}
+				mic_usb_24b_buffer[i * 2 + 0] = left_24b; // TODO: check this value
+				mic_usb_24b_buffer[i * 2 + 1] = right_24b; // TODO: check this value
+
 			} else {
-				if (current_settings.usr_mic_mute == false) {
-					int32_t left_16b = (int32_t) mic_i2s_read_buffer[i].left
-							>> MIC_FORMAT_24B_TO_16B_SHIFT_VAL; // Magic number
-					int32_t right_16b =
-							(int32_t) mic_i2s_read_buffer[i].right
-									>> MIC_FORMAT_24B_TO_16B_SHIFT_VAL; // Magic number
+				int32_t left_16b = (int32_t) mic_i2s_read_buffer[i].left
+						>> MIC_FORMAT_24B_TO_16B_SHIFT_VAL; // Magic number
+				int32_t right_16b =
+						(int32_t) mic_i2s_read_buffer[i].right
+								>> MIC_FORMAT_24B_TO_16B_SHIFT_VAL; // Magic number
 
-					mic_usb_16b_buffer[i * 2] = left_16b; // TODO: check this value
-					mic_usb_16b_buffer[i * 2 + 1] = right_16b; // TODO: check this value
-				} else {
-					mic_usb_16b_buffer[i * 2] = 0x0; // TODO: check this value
-					mic_usb_16b_buffer[i * 2 + 1] = 0x0; // TODO: check this value
-				}
+				mic_usb_16b_buffer[i * 2] = left_16b; // TODO: check this value
+				mic_usb_16b_buffer[i * 2 + 1] = right_16b; // TODO: check this value
 			}
+		}
+	} else {
+		if (current_settings.mic_resolution == 24) {
+			memset(mic_usb_24b_buffer, 0x0, sizeof(mic_usb_24b_buffer));
+		} else {
+			memset(mic_usb_16b_buffer, 0x0, sizeof(mic_usb_16b_buffer));
 		}
 	}
 }
@@ -823,6 +829,15 @@ void usb_headset_tud_audio_tx_done_post_load_handler(uint8_t rhport,
 void usb_headset_tud_audio_tx_done_post_load_handler(uint8_t rhport,
 		uint16_t n_bytes_copied, uint8_t itf, uint8_t ep_in,
 		uint8_t cur_alt_setting) {
+
+	if (current_settings.usr_mic_mute == true){
+		if (current_settings.mic_resolution == 24) {
+			memset(mic_usb_24b_buffer, 0x0, sizeof(mic_usb_24b_buffer));
+		} else {
+			memset(mic_usb_16b_buffer, 0x0, sizeof(mic_usb_16b_buffer));
+		}
+		return;
+	}
 
 	// Read data from microphone
 	uint32_t buffer_size_read = current_settings.samples_in_i2s_frame_min;
@@ -833,24 +848,22 @@ void usb_headset_tud_audio_tx_done_post_load_handler(uint8_t rhport,
 	if (num_of_frames_read >= current_settings.samples_in_i2s_frame_min) {
 		for (uint32_t i = 0; i < num_of_frames_read; i++) {
 			if (current_settings.mic_resolution == 24) {
-				if (current_settings.usr_mic_mute == false) {
-					int32_t mono_24b = (int32_t) mic_i2s_read_buffer[i]
-							<< MIC_FORMAT_24B_TO_24B_SHIFT_VAL; // Magic number
+				int32_t mono_24b = (int32_t) mic_i2s_read_buffer[i]
+						<< MIC_FORMAT_24B_TO_24B_SHIFT_VAL; // Magic number
 
-					mic_usb_24b_buffer[i] = mono_24b; // TODO: check this value
-				} else {
-					mic_usb_24b_buffer[i] = 0x0; // TODO: check this value
-				}
+				mic_usb_24b_buffer[i] = mono_24b; // TODO: check this value
 			} else {
-				if (current_settings.usr_mic_mute == false) {
-					int32_t mono_24b = (int32_t) mic_i2s_read_buffer[i]
-							>> MIC_FORMAT_24B_TO_16B_SHIFT_VAL; // Magic number
+				int32_t mono_24b = (int32_t) mic_i2s_read_buffer[i]
+						>> MIC_FORMAT_24B_TO_16B_SHIFT_VAL; // Magic number
 
-					mic_usb_16b_buffer[i] = mono_24b; // TODO: check this value
-				} else {
-					mic_usb_16b_buffer[i] = 0x0; // TODO: check this value
-				}
+				mic_usb_16b_buffer[i] = mono_24b; // TODO: check this value
 			}
+		}
+	} else {
+		if (current_settings.mic_resolution == 24) {
+			memset(mic_usb_24b_buffer, 0x0, sizeof(mic_usb_24b_buffer));
+		} else {
+			memset(mic_usb_16b_buffer, 0x0, sizeof(mic_usb_16b_buffer));
 		}
 	}
 }
