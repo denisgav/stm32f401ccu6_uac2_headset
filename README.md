@@ -15,7 +15,7 @@ Running [tinyusb UAC2 headset example](https://github.com/hathach/tinyusb/tree/m
 
 ## Cloning
 ```sh
-git clone https://github.com/denisgav/rpi_usb_sound_card.git
+git clone [https://github.com/denisgav/rpi_usb_sound_card.git](https://github.com/denisgav/stm32f401ccu6_uac2_headset.git)
 ```
 
 ## Default Pinout
