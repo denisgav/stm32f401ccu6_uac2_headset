@@ -16,9 +16,19 @@ typedef struct _ring_buf_t {
     size_t size;
 } ring_buf_t;
 
+static inline uint32_t half_word_swap(const uint32_t data){
+	uint32_t res = 0;
+	uint16_t* half_word_data_ptr = (uint16_t*)(&data);
+	uint16_t* half_word_res_ptr = (uint16_t*)(&res);
+	half_word_res_ptr[1] = half_word_data_ptr[0];
+	half_word_res_ptr[0] = half_word_data_ptr[1];
+	return res;
+}
+
 void ringbuf_init(ring_buf_t *rbuf, uint32_t *buffer, size_t size);
 
 bool ringbuf_push(ring_buf_t *rbuf, uint32_t data);
+bool ringbuf_push_half_word_swap(ring_buf_t *rbuf, uint32_t *data);
 
 bool ringbuf_pop(ring_buf_t *rbuf, uint32_t *data);
 bool ringbuf_pop_half_word_swap(ring_buf_t *rbuf, uint32_t *data);
