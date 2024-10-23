@@ -7,15 +7,17 @@
 // One byte of capacity is used to detect buffer empty/full
 
 
-void ringbuf_init(ring_buf_t *rbuf, uint32_t *buffer, size_t size) {
+void ringbuf_init(volatile ring_buf_t *rbuf, uint32_t *buffer, uint16_t size) {
     rbuf->buffer = buffer;
     rbuf->size = size;
     rbuf->head = 0;
     rbuf->tail = 0;
 }
 
-bool ringbuf_push(ring_buf_t *rbuf, uint32_t data) {
-    size_t next_tail = (rbuf->tail + 1) % rbuf->size;
+bool ringbuf_push(volatile ring_buf_t *rbuf, uint32_t data) {
+	uint16_t next_tail = (rbuf->tail + 1);
+	if(next_tail >= rbuf->size)
+		next_tail -= rbuf->size;
 
     if (next_tail != rbuf->head) {
         rbuf->buffer[rbuf->tail] = data;
@@ -27,8 +29,10 @@ bool ringbuf_push(ring_buf_t *rbuf, uint32_t data) {
     return false;
 }
 
-bool ringbuf_push_half_word_swap(ring_buf_t *rbuf, uint32_t *data){
-	size_t next_tail = (rbuf->tail + 1) % rbuf->size;
+bool ringbuf_push_half_word_swap(volatile ring_buf_t *rbuf, uint32_t *data){
+	uint16_t next_tail = (rbuf->tail + 1);
+	if(next_tail >= rbuf->size)
+		next_tail -= rbuf->size;
 
 	if (next_tail != rbuf->head) {
 		rbuf->buffer[rbuf->tail] = half_word_swap(data);
@@ -40,40 +44,55 @@ bool ringbuf_push_half_word_swap(ring_buf_t *rbuf, uint32_t *data){
 	return false;
 }
 
-bool ringbuf_pop(ring_buf_t *rbuf, uint32_t *data) {
+bool ringbuf_pop(volatile ring_buf_t *rbuf, uint32_t *data) {
     if (rbuf->head == rbuf->tail) {
         // empty
         return false;
     }
 
+    uint16_t next_head = (rbuf->head + 1);
+	if(next_head >= rbuf->size)
+		next_head -= rbuf->size;
+
     *data = rbuf->buffer[rbuf->head];
-    rbuf->head = (rbuf->head + 1) % rbuf->size;
+    rbuf->head = next_head;
     return true;
 }
 
-bool ringbuf_pop_half_word_swap(ring_buf_t *rbuf, uint32_t *data){
+bool ringbuf_pop_half_word_swap(volatile ring_buf_t *rbuf, uint32_t *data){
 	if (rbuf->head == rbuf->tail) {
 		// empty
 		return false;
 	}
 
+	uint16_t next_head = (rbuf->head + 1);
+	if(next_head >= rbuf->size)
+		next_head -= rbuf->size;
+
 	*data = half_word_swap(rbuf->buffer[rbuf->head]);
-	rbuf->head = (rbuf->head + 1) % rbuf->size;
+	rbuf->head = next_head;
 	return true;
 }
 
-bool ringbuf_is_empty(ring_buf_t *rbuf) {
+bool ringbuf_is_empty(volatile ring_buf_t *rbuf) {
     return rbuf->head == rbuf->tail;
 }
 
-bool ringbuf_is_full(ring_buf_t *rbuf) {
+bool ringbuf_is_full(volatile ring_buf_t *rbuf) {
     return ((rbuf->tail + 1) % rbuf->size) == rbuf->head;
 }
 
-size_t ringbuf_available_data(ring_buf_t *rbuf) {
-    return (rbuf->tail - rbuf->head + rbuf->size) % rbuf->size;
+uint16_t ringbuf_available_data(volatile ring_buf_t *rbuf) {
+	uint16_t avail_data_tmp = rbuf->size + rbuf->tail - rbuf->head;
+	if(avail_data_tmp >= rbuf->size)
+		avail_data_tmp -= rbuf->size;
+    return avail_data_tmp;
 }
 
-size_t ringbuf_available_space(ring_buf_t *rbuf) {
-    return rbuf->size - ringbuf_available_data(rbuf) - 1;
+uint16_t ringbuf_available_space(volatile ring_buf_t *rbuf) {
+	uint16_t avail_data_tmp = rbuf->size + rbuf->tail - rbuf->head;
+	if(avail_data_tmp >= rbuf->size)
+		avail_data_tmp -= rbuf->size;
+
+    return rbuf->size - avail_data_tmp;
 }

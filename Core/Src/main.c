@@ -72,12 +72,12 @@ PCD_HandleTypeDef hpcd_USB_OTG_FS;
 usb_headset_settings_t current_settings;
 
 // Buffer for speaker data
-ring_buf_t spk_ring_buffer;
-uint32_t *spk_ring_buffer_storage;
+volatile ring_buf_t spk_ring_buffer;
+volatile uint32_t *spk_ring_buffer_storage;
 
 // Buffer for microphone data
-ring_buf_t mic_ring_buffer;
-uint32_t *mic_ring_buffer_storage;
+volatile ring_buf_t mic_ring_buffer;
+volatile uint32_t *mic_ring_buffer_storage;
 
 // Buffer for speaker data
 i2s_32b_audio_sample spk_32b_i2s_buffer[SAMPLE_BUFFER_SIZE];
@@ -126,8 +126,8 @@ void usb_headset_tud_audio_tx_done_post_load_handler(uint8_t rhport,
 		uint16_t n_bytes_copied, uint8_t itf, uint8_t ep_in,
 		uint8_t cur_alt_setting);
 
-int spk_machine_i2s_write_stream(uint32_t *buf_in, size_t size);
-int mic_machine_i2s_read_stream(uint32_t *buf_in, size_t size);
+int spk_machine_i2s_write_stream(uint32_t *buf_in, uint32_t size);
+int mic_machine_i2s_read_stream(uint32_t *buf_in, uint32_t size);
 
 void HAL_I2S_TxHalfCpltCallback(I2S_HandleTypeDef *hi2s);
 void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s);
@@ -608,8 +608,13 @@ void refresh_i2s_connections(void) {
 		}
 	}
 
+	tud_audio_clear_ep_in_ff();
+
 	if (spk_ring_buffer_storage != NULL) {
 		free(spk_ring_buffer_storage);
+	}
+	if (mic_ring_buffer_storage != NULL) {
+		free(mic_ring_buffer_storage);
 	}
 
 	current_settings.samples_in_i2s_frame_min =
@@ -761,16 +766,24 @@ void usb_headset_tud_audio_rx_done_pre_read_handler(uint8_t rhport,
 
 void usb_headset_tud_audio_tx_done_pre_load_handler(uint8_t rhport, uint8_t itf,
 		uint8_t ep_in, uint8_t cur_alt_setting) {
-	if (current_settings.mic_resolution == 24) {
-		uint32_t buffer_size = current_settings.samples_in_i2s_frame_min
-				* CFG_TUD_AUDIO_FUNC_1_FORMAT_2_N_BYTES_PER_SAMPLE_TX
-				* CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX;
-		tud_audio_write(&(mic_usb_24b_buffer[0]), buffer_size);
-	} else {
-		uint32_t buffer_size = current_settings.samples_in_i2s_frame_min
-				* CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_TX
-				* CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX;
-		tud_audio_write(&(mic_usb_16b_buffer[0]), buffer_size);
+	if (current_settings.mic_blink_interval_ms == BLINK_STREAMING){
+		if (current_settings.mic_resolution == 24) {
+			uint32_t buffer_size = current_settings.samples_in_i2s_frame_min
+					* CFG_TUD_AUDIO_FUNC_1_FORMAT_2_N_BYTES_PER_SAMPLE_TX
+					* CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX;
+			uint16_t bytes_writen = tud_audio_write(&(mic_usb_24b_buffer[0]), buffer_size);
+			if(bytes_writen != buffer_size){
+				tud_audio_clear_ep_in_ff();
+			}
+		} else {
+			uint32_t buffer_size = current_settings.samples_in_i2s_frame_min
+					* CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_TX
+					* CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX;
+			uint16_t bytes_writen = tud_audio_write(&(mic_usb_16b_buffer[0]), buffer_size);
+			if(bytes_writen != buffer_size){
+				tud_audio_clear_ep_in_ff();
+			}
+		}
 	}
 }
 
@@ -778,6 +791,10 @@ void usb_headset_tud_audio_tx_done_pre_load_handler(uint8_t rhport, uint8_t itf,
 void usb_headset_tud_audio_tx_done_post_load_handler(uint8_t rhport,
 		uint16_t n_bytes_copied, uint8_t itf, uint8_t ep_in,
 		uint8_t cur_alt_setting) {
+
+	if (current_settings.mic_blink_interval_ms != BLINK_STREAMING){
+		return;
+	}
 
 	if (current_settings.usr_mic_mute == true){
 		if (current_settings.mic_resolution == 24) {
@@ -829,6 +846,10 @@ void usb_headset_tud_audio_tx_done_post_load_handler(uint8_t rhport,
 void usb_headset_tud_audio_tx_done_post_load_handler(uint8_t rhport,
 		uint16_t n_bytes_copied, uint8_t itf, uint8_t ep_in,
 		uint8_t cur_alt_setting) {
+
+	if (current_settings.mic_blink_interval_ms != BLINK_STREAMING){
+		return;
+	}
 
 	if (current_settings.usr_mic_mute == true){
 		if (current_settings.mic_resolution == 24) {
@@ -901,7 +922,7 @@ void led_blinking_task(void) {
 	led_state = 1 - led_state;
 }
 
-int spk_machine_i2s_write_stream(uint32_t *buf_in, size_t size) {
+int spk_machine_i2s_write_stream(uint32_t *buf_in, uint32_t size) {
 	if (size == 0) {
 		return 0;
 	}
@@ -919,7 +940,7 @@ int spk_machine_i2s_write_stream(uint32_t *buf_in, size_t size) {
 	return size;
 }
 
-int mic_machine_i2s_read_stream(uint32_t *buf_in, size_t size) {
+int mic_machine_i2s_read_stream(uint32_t *buf_in, uint32_t size) {
 	if (size == 0) {
 		return 0;
 	}
@@ -928,7 +949,9 @@ int mic_machine_i2s_read_stream(uint32_t *buf_in, size_t size) {
 
 	if (available_data_words >= size) {
 		for (uint32_t i = 0; i < size; i++) {
-			ringbuf_pop_half_word_swap(&mic_ring_buffer, &buf_in[i]);
+			if(ringbuf_pop_half_word_swap(&mic_ring_buffer, &buf_in[i]) == false){
+				return i;
+			}
 		}
 		return size;
 	} else {
@@ -1007,7 +1030,8 @@ uint32_t empty_mic_dma(uint32_t *dma_buffer_p,
 	if (ringbuf_available_space(&mic_ring_buffer)
 			>= sizeof_half_dma_buffer_in_words) {
 		for (uint32_t i = 0; i < sizeof_half_dma_buffer_in_words; i++) {
-			ringbuf_push(&mic_ring_buffer, dma_buffer_p[i]);
+			if(ringbuf_push(&mic_ring_buffer, dma_buffer_p[i]) == false)
+				return;
 		}
 	}
 }
@@ -1018,7 +1042,8 @@ uint32_t empty_mic_dma(uint32_t *dma_buffer_p,
 	if (ringbuf_available_space(&mic_ring_buffer)
 			>= sizeof_half_dma_buffer_in_words) {
 		for (uint32_t i = 0; i < sizeof_half_dma_buffer_in_words; i+=2) {
-			ringbuf_push(&mic_ring_buffer, dma_buffer_p[i]);
+			if(ringbuf_push(&mic_ring_buffer, dma_buffer_p[i]) == false)
+				return;
 		}
 	}
 }
