@@ -25,21 +25,21 @@ static inline uint32_t half_word_swap(const uint32_t data){
 	return res;
 }
 
-void ringbuf_init(volatile ring_buf_t *rbuf, uint32_t *buffer, uint16_t size);
+void ringbuf_init(ring_buf_t *rbuf, uint32_t *buffer, uint16_t size);
 
-bool ringbuf_push(volatile ring_buf_t *rbuf, uint32_t data);
-bool ringbuf_push_half_word_swap(volatile ring_buf_t *rbuf, uint32_t *data);
+bool ringbuf_push(ring_buf_t *rbuf, uint32_t data);
+bool ringbuf_push_half_word_swap(ring_buf_t *rbuf, uint32_t data);
 
-bool ringbuf_pop(volatile ring_buf_t *rbuf, uint32_t *data);
-bool ringbuf_pop_half_word_swap(volatile ring_buf_t *rbuf, uint32_t *data);
+bool ringbuf_pop(ring_buf_t *rbuf, uint32_t *data);
+bool ringbuf_pop_half_word_swap(ring_buf_t *rbuf, uint32_t *data);
 
-bool ringbuf_is_empty(volatile ring_buf_t *rbuf);
+bool ringbuf_is_empty(ring_buf_t *rbuf);
 
-bool ringbuf_is_full(volatile ring_buf_t *rbuf);
+bool ringbuf_is_full(ring_buf_t *rbuf);
 
-uint16_t ringbuf_available_data(volatile ring_buf_t *rbuf);
+uint16_t ringbuf_available_data(ring_buf_t *rbuf);
 
-uint16_t ringbuf_available_space(volatile ring_buf_t *rbuf);
+uint16_t ringbuf_available_space(ring_buf_t *rbuf);
 
 #ifdef __cplusplus
 }
