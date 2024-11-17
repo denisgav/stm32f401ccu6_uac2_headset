@@ -968,18 +968,12 @@ void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s) {
 }
 
 void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s) {
-	int num_of_words_empty =
-			(current_settings.mic_resolution == 24) ?
-					current_settings.samples_in_i2s_frame_max :
-					current_settings.samples_in_i2s_frame_max / 2;
+	int num_of_words_empty = current_settings.samples_in_i2s_frame_max;
 	empty_mic_dma(&mic_i2s_buf[0], num_of_words_empty);
 }
 
 void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s) {
-	int num_of_words_empty =
-				(current_settings.mic_resolution == 24) ?
-						current_settings.samples_in_i2s_frame_max :
-						current_settings.samples_in_i2s_frame_max / 2;
+	int num_of_words_empty = current_settings.samples_in_i2s_frame_max;
 	empty_mic_dma(&mic_i2s_buf[num_of_words_empty],
 			num_of_words_empty);
 }
