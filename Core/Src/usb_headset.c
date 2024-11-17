@@ -19,9 +19,6 @@ CFG_TUD_AUDIO_FUNC_1_FORMAT_2_RESOLUTION_RX };
 int8_t spk_mute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1];  // +1 for master channel 0
 int16_t spk_volume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1]; // +1 for master channel 0
 
-int8_t mic_mute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1];  // +1 for master channel 0
-int16_t mic_volume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX + 1]; // +1 for master channel 0
-
 // Current resolution, update on format change
 uint8_t current_resolution;
 uint32_t spk_current_sample_rate = 48000; //44100;
@@ -41,8 +38,6 @@ void usb_headset_init() {
 			ch_idx++) {
 		spk_mute[ch_idx] = 0;
 		spk_volume[ch_idx] = MAX_VOLUME_ENC;
-		mic_mute[ch_idx] = 0;
-		mic_volume[ch_idx] = MAX_VOLUME_ENC;
 	}
 
 	TU_LOG1("Headset running\r\n");
