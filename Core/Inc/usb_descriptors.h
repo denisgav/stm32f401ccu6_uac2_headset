@@ -28,7 +28,6 @@
 
 // #include "tusb.h"
 
-#if USB_HID_AUDIO_CTRL_ACTIVE == 1
 enum {
 	REPORT_ID_CONSUMER_CONTROL = 1,
 	REPORT_ID_COUNT
@@ -68,8 +67,6 @@ enum {
 		 HID_COLLECTION_END,              /* End Collection                                                                                   */\
 
 
-#endif //USB_HID_AUDIO_CTRL_ACTIVE
-
 // Unit numbers are arbitrary selected
 #define UAC2_ENTITY_CLOCK               0x04
 // Speaker path
@@ -84,9 +81,7 @@ enum {
 	ITF_NUM_AUDIO_CONTROL = 0,
 	ITF_NUM_AUDIO_STREAMING_SPK,
 	ITF_NUM_AUDIO_STREAMING_MIC,
-#if USB_HID_AUDIO_CTRL_ACTIVE == 1
 	ITF_NUM_HID,
-#endif //USB_HID_AUDIO_CTRL_ACTIVE
 	ITF_NUM_TOTAL
 };
 

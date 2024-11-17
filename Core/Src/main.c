@@ -36,12 +36,7 @@
 #include "ssd1306.h"
 #include "ssd1306_fonts.h"
 
-// Uncomment this define to enable rotary encoder
-#define EN_ROTARY_ENCODER
-
-#if USB_HID_AUDIO_CTRL_ACTIVE == 1
 #include "usb_hid_status.h"
-#endif //USB_HID_AUDIO_CTRL_ACTIVE
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -92,18 +87,11 @@ uint32_t mic_usb_24b_buffer[SAMPLE_BUFFER_SIZE];
 uint16_t mic_usb_16b_buffer[SAMPLE_BUFFER_SIZE];
 uint8_t mic_usb_read_buf[SAMPLE_BUFFER_SIZE * 2 * 4 * 2]; // Max size of audio sample is  2 * 4. 2 Channels, 4 byte width sample
 uint32_t mic_i2s_buf[SAMPLE_BUFFER_SIZE * 2];
-
-#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX == 2
-i2s_32b_audio_sample mic_i2s_read_buffer[SAMPLE_BUFFER_SIZE];
-#else // CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX == 2
 uint32_t mic_i2s_read_buffer[SAMPLE_BUFFER_SIZE];
-#endif // CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX == 2
 
-#if USB_HID_AUDIO_CTRL_ACTIVE == 1
 usb_hid_status_t hid_status;
 void check_buttons(void);
 void usb_hid_task(void);
-#endif //USB_HID_AUDIO_CTRL_ACTIVE
 
 void led_blinking_task(void);
 
@@ -254,12 +242,8 @@ int main(void)
 	// Init SSD
 	ssd1306_Init();
 
-#if USB_HID_AUDIO_CTRL_ACTIVE == 1
 	memset(&hid_status, 0x0, sizeof(hid_status));
-#ifdef EN_ROTARY_ENCODER
 	HAL_TIM_Encoder_Start_IT(&htim3, TIM_CHANNEL_ALL);
-#endif //EN_ROTARY_ENCODER
-#endif //USB_HID_AUDIO_CTRL_ACTIVE
 
   /* USER CODE END 2 */
 
@@ -269,9 +253,7 @@ int main(void)
 		usb_headset_task(); // TinyUSB device task
 		led_blinking_task();
 		status_update_task();
-#if USB_HID_AUDIO_CTRL_ACTIVE == 1
 		usb_hid_task();
-#endif //USB_HID_AUDIO_CTRL_ACTIVE
 
     /* USER CODE END WHILE */
 
@@ -809,62 +791,6 @@ void usb_headset_tud_audio_tx_done_pre_load_handler(uint8_t rhport, uint8_t itf,
 	}
 }
 
-#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX == 2
-void usb_headset_tud_audio_tx_done_post_load_handler(uint8_t rhport,
-		uint16_t n_bytes_copied, uint8_t itf, uint8_t ep_in,
-		uint8_t cur_alt_setting) {
-
-	if (current_settings.mic_blink_interval_ms != BLINK_STREAMING){
-		return;
-	}
-
-	if (current_settings.usr_mic_mute == true){
-		if (current_settings.mic_resolution == 24) {
-			memset(mic_usb_24b_buffer, 0x0, sizeof(mic_usb_24b_buffer));
-		} else {
-			memset(mic_usb_16b_buffer, 0x0, sizeof(mic_usb_16b_buffer));
-		}
-		return;
-	}
-
-	// Read data from microphone
-	uint32_t buffer_size_read = current_settings.samples_in_i2s_frame_min * 2;
-	int num_words_read = mic_machine_i2s_read_stream(&mic_i2s_read_buffer[0],
-			buffer_size_read);
-	int num_of_frames_read = num_words_read / 2;
-	if (num_of_frames_read >= current_settings.samples_in_i2s_frame_min) {
-
-		for (uint32_t i = 0; i < num_of_frames_read; i++) {
-			if (current_settings.mic_resolution == 24) {
-				int32_t left_24b = (int32_t) mic_i2s_read_buffer[i].left
-						<< MIC_FORMAT_24B_TO_24B_SHIFT_VAL; // Magic number
-				int32_t right_24b =
-						(int32_t) mic_i2s_read_buffer[i].right
-								<< MIC_FORMAT_24B_TO_24B_SHIFT_VAL; // Magic number
-
-				mic_usb_24b_buffer[i * 2 + 0] = left_24b; // TODO: check this value
-				mic_usb_24b_buffer[i * 2 + 1] = right_24b; // TODO: check this value
-
-			} else {
-				int32_t left_16b = (int32_t) mic_i2s_read_buffer[i].left
-						>> MIC_FORMAT_24B_TO_16B_SHIFT_VAL; // Magic number
-				int32_t right_16b =
-						(int32_t) mic_i2s_read_buffer[i].right
-								>> MIC_FORMAT_24B_TO_16B_SHIFT_VAL; // Magic number
-
-				mic_usb_16b_buffer[i * 2] = left_16b; // TODO: check this value
-				mic_usb_16b_buffer[i * 2 + 1] = right_16b; // TODO: check this value
-			}
-		}
-	} else {
-		if (current_settings.mic_resolution == 24) {
-			memset(mic_usb_24b_buffer, 0x0, sizeof(mic_usb_24b_buffer));
-		} else {
-			memset(mic_usb_16b_buffer, 0x0, sizeof(mic_usb_16b_buffer));
-		}
-	}
-}
-#else // CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX == 2
 void usb_headset_tud_audio_tx_done_post_load_handler(uint8_t rhport,
 		uint16_t n_bytes_copied, uint8_t itf, uint8_t ep_in,
 		uint8_t cur_alt_setting) {
@@ -910,7 +836,6 @@ void usb_headset_tud_audio_tx_done_post_load_handler(uint8_t rhport,
 		}
 	}
 }
-#endif //#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX == 2
 
 int32_t usb_to_i2s_32b_sample_convert(int32_t sample, uint32_t volume_db) {
 	int64_t sample_tmp = (int64_t) sample * (int64_t) volume_db;
@@ -1045,20 +970,6 @@ uint32_t feed_spk_dma(uint32_t *dma_buffer_p,
 	}
 }
 
-#if CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX == 2
-uint32_t empty_mic_dma(uint32_t *dma_buffer_p,
-		uint32_t sizeof_half_dma_buffer_in_words) {
-	// when space exists, copy samples into ring buffer
-	if (ringbuf_available_space(&mic_ring_buffer)
-			>= sizeof_half_dma_buffer_in_words) {
-		for (uint32_t i = 0; i < sizeof_half_dma_buffer_in_words; i++) {
-			if(ringbuf_push(&mic_ring_buffer, dma_buffer_p[i]) == false)
-				return i;
-		}
-	}
-	return sizeof_half_dma_buffer_in_words;
-}
-#else // CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX == 2
 uint32_t empty_mic_dma(uint32_t *dma_buffer_p,
 	uint32_t sizeof_half_dma_buffer_in_words) {
 	// when space exists, copy samples into ring buffer
@@ -1071,7 +982,6 @@ uint32_t empty_mic_dma(uint32_t *dma_buffer_p,
 	}
 	return sizeof_half_dma_buffer_in_words;
 }
-#endif// CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX == 2
 
 //--------------------------------------------------------------------+
 // STATUS UPDATE TASK
@@ -1231,7 +1141,6 @@ void display_ssd1306_info(void) {
 	ssd1306_UpdateScreen();
 }
 
-#if USB_HID_AUDIO_CTRL_ACTIVE == 1
 //-----------------------------------------------------------------
 //                 USB HID
 //-----------------------------------------------------------------
@@ -1352,7 +1261,6 @@ void usb_hid_task(void) {
 	if (cur_time_ms - prev_hid_tasc_call__ms < 50)
 		return;
 
-#ifdef EN_ROTARY_ENCODER
 	//--------------
 	// Checking rotary encoder
 	//--------------
@@ -1370,7 +1278,6 @@ void usb_hid_task(void) {
 		hid_status.volume_rotary_encoder_cntr_prev = volume_rotary_encoder_cntr;
 	}
 	//--------------
-#endif //EN_ROTARY_ENCODER
 
 	//--------------
 	// Checking buttons
@@ -1409,7 +1316,6 @@ void usb_hid_task(void) {
 
 //-----------------------------------------------------------------
 //-----------------------------------------------------------------
-#endif // USB_HID_AUDIO_CTRL_ACTIVE
 
 /* USER CODE END 4 */
 

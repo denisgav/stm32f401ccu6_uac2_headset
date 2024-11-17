@@ -75,7 +75,6 @@ uint8_t const * tud_descriptor_device_cb(void)
 //--------------------------------------------------------------------+
 // HID Report Descriptor
 //--------------------------------------------------------------------+
-#if USB_HID_AUDIO_CTRL_ACTIVE == 1
 uint8_t const desc_hid_report[] = {
 		MY_TUD_HID_REPORT_DESC_CONSUMER(HID_REPORT_ID(REPORT_ID_CONSUMER_CONTROL))
 };
@@ -87,15 +86,10 @@ uint8_t const desc_hid_report[] = {
 uint8_t const* tud_hid_descriptor_report_cb(uint8_t itf) {
 	return desc_hid_report;
 }
-#endif //USB_HID_AUDIO_CTRL_ACTIVE
 //--------------------------------------------------------------------+
 // Configuration Descriptor
 //--------------------------------------------------------------------+
-#if USB_HID_AUDIO_CTRL_ACTIVE == 1
 #define CONFIG_TOTAL_LEN    	(TUD_CONFIG_DESC_LEN + TUD_HID_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO_HEADSET_STEREO_DESC_LEN)
-#else
-#define CONFIG_TOTAL_LEN    	(TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO_HEADSET_STEREO_DESC_LEN)
-#endif
 
 #if CFG_TUSB_MCU == OPT_MCU_LPC175X_6X || CFG_TUSB_MCU == OPT_MCU_LPC177X_8X || CFG_TUSB_MCU == OPT_MCU_LPC40XX
   // LPC 17xx and 40xx endpoint type (bulk/interrupt/iso) are fixed by its number
@@ -130,9 +124,7 @@ uint8_t const* tud_hid_descriptor_report_cb(uint8_t itf) {
   #define EPNUM_AUDIO_INT   0x02
 #endif
 
-#if USB_HID_AUDIO_CTRL_ACTIVE == 1
 #define EPNUM_HID         0x83
-#endif // USB_HID_AUDIO_CTRL_ACTIVE
 
 uint8_t const desc_configuration[] = {
  // Config number, interface count, string index, total length, attribute, power in mA
@@ -142,12 +134,10 @@ uint8_t const desc_configuration[] = {
 	, TUD_AUDIO_HEADSET_STEREO_DESCRIPTOR(2, EPNUM_AUDIO_OUT,
 			EPNUM_AUDIO_IN | 0x80, EPNUM_AUDIO_INT | 0x80)
 
-#if USB_HID_AUDIO_CTRL_ACTIVE == 1
 	// Interface number, string index, protocol, report descriptor len, EP In address, size & polling interval
 	, TUD_HID_DESCRIPTOR(ITF_NUM_HID, 0, HID_ITF_PROTOCOL_NONE,
 			sizeof(desc_hid_report),
 			EPNUM_HID, CFG_TUD_HID_EP_BUFSIZE, 10)
-#endif //USB_HID_AUDIO_CTRL_ACTIVE
 };
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR
