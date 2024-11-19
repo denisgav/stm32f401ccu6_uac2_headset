@@ -88,6 +88,9 @@ uint32_t mic_usb_24b_buffer[SAMPLE_BUFFER_SIZE];
 uint16_t mic_usb_16b_buffer[SAMPLE_BUFFER_SIZE];
 uint32_t mic_i2s_buf[SAMPLE_BUFFER_SIZE * 2];
 uint32_t mic_i2s_read_buffer[SAMPLE_BUFFER_SIZE];
+uint32_t num_of_mic_samples;
+
+uint32_t get_num_of_mic_samples();
 
 usb_hid_status_t hid_status;
 void check_buttons(void);
@@ -905,17 +908,32 @@ void usb_headset_tud_audio_rx_done_pre_read_handler(uint8_t rhport,
 	}
 }
 
+uint32_t get_num_of_mic_samples(){
+	static uint32_t format_44100_khz_counter = 0;
+	if(current_settings.spk_sample_rate == 44100){
+		format_44100_khz_counter++;
+		if(format_44100_khz_counter >= 9){
+			format_44100_khz_counter = 0;
+			return 45;
+		} else {
+			return 44;
+		}
+	} else {
+		return current_settings.samples_in_i2s_frame_min;
+	}
+}
+
 void usb_headset_tud_audio_tx_done_pre_load_handler(uint8_t rhport, uint8_t itf,
 		uint8_t ep_in, uint8_t cur_alt_setting) {
 	if (current_settings.mic_blink_interval_ms == BLINK_STREAMING) {
 		if (current_settings.mic_resolution == 24) {
-			uint32_t buffer_size = current_settings.samples_in_i2s_frame_min
+			uint32_t buffer_size = num_of_mic_samples
 					* CFG_TUD_AUDIO_FUNC_1_FORMAT_2_N_BYTES_PER_SAMPLE_TX
 					* CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX;
 			uint16_t bytes_writen = tud_audio_write(&(mic_usb_24b_buffer[0]),
 					buffer_size);
 		} else {
-			uint32_t buffer_size = current_settings.samples_in_i2s_frame_min
+			uint32_t buffer_size = num_of_mic_samples
 					* CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_TX
 					* CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_TX;
 			uint16_t bytes_writen = tud_audio_write(&(mic_usb_16b_buffer[0]),
@@ -942,7 +960,8 @@ void usb_headset_tud_audio_tx_done_post_load_handler(uint8_t rhport,
 	}
 
 	// Read data from microphone
-	uint32_t buffer_size_read = current_settings.samples_in_i2s_frame_min;
+	num_of_mic_samples = get_num_of_mic_samples();
+	uint32_t buffer_size_read = num_of_mic_samples;
 	int num_words_read = mic_machine_i2s_read_stream(&mic_i2s_read_buffer[0],
 			buffer_size_read);
 	int num_of_frames_read = num_words_read;
