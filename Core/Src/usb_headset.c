@@ -6,7 +6,7 @@
 //--------------------------------------------------------------------+
 
 // List of supported sample rates
-const uint32_t sample_rates[] = { 48000 }; //{44100, 48000};
+const uint32_t sample_rates[] = {44100, 48000};
 #define N_SAMPLE_RATES  TU_ARRAY_SIZE(sample_rates)
 
 // Resolution per format
@@ -21,8 +21,8 @@ int16_t spk_volume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1]; // +1 for master cha
 
 // Current resolution, update on format change
 uint8_t current_resolution;
-uint32_t spk_current_sample_rate = 48000; //44100;
-uint32_t mic_current_sample_rate = 48000; //44100;
+uint32_t spk_current_sample_rate = 44100;
+uint32_t mic_current_sample_rate = 44100;
 
 void usb_headset_init() {
 	board_init();
