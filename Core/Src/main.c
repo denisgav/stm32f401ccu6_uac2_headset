@@ -738,7 +738,7 @@ HAL_StatusTypeDef refresh_clk(void){
 //	};
 //
 
-	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+//	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
 	RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
 	if(current_settings.spk_sample_rate == 48000){
@@ -1029,6 +1029,12 @@ int spk_machine_i2s_write_stream(uint32_t *buf_in, uint32_t size) {
 	// copy audio samples from the app buffer to the ring buffer
 	// loop, reading samples until the app buffer is emptied
 	// for uasyncio mode, the loop will make an early exit if the ring buffer becomes full
+
+	// Not allow buffer overflow
+	uint16_t available_space = ringbuf_available_space(&spk_ring_buffer);
+	if(available_space <= size){
+		return 0;
+	}
 
 	if (current_settings.spk_resolution == 24) {
 		for (uint32_t a_index = 0; a_index < size; a_index++) {
