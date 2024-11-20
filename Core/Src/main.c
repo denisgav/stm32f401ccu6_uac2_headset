@@ -1314,6 +1314,14 @@ void display_ssd1306_info(void) {
 		ssd1306_SetCursor(68, 40);
 		ssd1306_WriteString(mute_r_str, Font_6x8, White);
 
+		char hid_stat_str[20] = "HID susp: ";
+		strcat(hid_stat_str, (tud_suspended() ? "T" : "F"));
+		strcat(hid_stat_str, ", rdy: ");
+		strcat(hid_stat_str, (tud_hid_ready() ? "T" : "F"));
+
+		ssd1306_SetCursor(4, 48);
+		ssd1306_WriteString(hid_stat_str, Font_6x8, White);
+
 	}
 	ssd1306_UpdateScreen();
 }
