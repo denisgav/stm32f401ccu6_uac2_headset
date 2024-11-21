@@ -56,6 +56,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
+DMA_HandleTypeDef hdma_i2c1_tx;
 
 I2S_HandleTypeDef hi2s2;
 I2S_HandleTypeDef hi2s3;
@@ -260,6 +261,8 @@ int main(void)
 		led_blinking_task();
 		status_update_task();
 		usb_hid_task();
+
+		ssd1306_DMA_task();
 
     /* USER CODE END WHILE */
 
@@ -534,6 +537,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Stream4_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
+  /* DMA1_Stream6_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
 
 }
 
@@ -1172,7 +1178,7 @@ void status_update_task(void) {
 			current_settings.usr_mic_mute ? GPIO_PIN_SET : GPIO_PIN_RESET);
 
 	// Update status once per second
-	if (cur_time_ms - prev_status_update__ms < 1000)
+	if (cur_time_ms - prev_status_update__ms < 100)
 		return;
 
 	prev_status_update__ms = cur_time_ms;
@@ -1323,7 +1329,7 @@ void display_ssd1306_info(void) {
 		ssd1306_WriteString(hid_stat_str, Font_6x8, White);
 
 	}
-	ssd1306_UpdateScreen();
+	ssd1306_UpdateScreen_DMA();
 }
 
 //-----------------------------------------------------------------

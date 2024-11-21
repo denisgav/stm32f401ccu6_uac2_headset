@@ -156,6 +156,8 @@ typedef struct {
 void ssd1306_Init(void);
 void ssd1306_Fill(SSD1306_COLOR color);
 void ssd1306_UpdateScreen(void);
+void ssd1306_UpdateScreen_DMA(void);
+void ssd1306_DMA_task(void);
 void ssd1306_DrawPixel(uint8_t x, uint8_t y, SSD1306_COLOR color);
 char ssd1306_WriteChar(char ch, SSD1306_Font_t Font, SSD1306_COLOR color);
 char ssd1306_WriteString(char* str, SSD1306_Font_t Font, SSD1306_COLOR color);
@@ -205,8 +207,12 @@ uint8_t ssd1306_GetDisplayOn();
 
 // Low-level procedures
 void ssd1306_Reset(void);
-void ssd1306_WriteCommand(uint8_t byte);
-void ssd1306_WriteData(uint8_t* buffer, size_t buff_size);
+
+HAL_StatusTypeDef ssd1306_WriteCommand(uint8_t byte);
+HAL_StatusTypeDef ssd1306_WriteCommand_DMA(uint8_t byte);
+HAL_StatusTypeDef ssd1306_WriteData(uint8_t* buffer, size_t buff_size);
+HAL_StatusTypeDef ssd1306_WriteData_DMA(uint8_t* buffer, size_t buff_size);
+
 SSD1306_Error_t ssd1306_FillBuffer(uint8_t* buf, uint32_t len);
 
 _END_STD_C
